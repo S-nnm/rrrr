@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ガチャ</title>
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: sans-serif;
+    text-align: center;
+    color: #f8f8f8;
+}
+
+body {
+    background: linear-gradient(to bottom, #111);
+}
+
+button {
+    font-size: 18px;
+    padding: 8px 18px;
+    margin: 8px;
+    cursor: pointer;
+}
+button:disabled {
+    opacity: 0.5;
+}
+
+#result {
+    font-size: 26px;
+    margin-top: 20px;
+    color: #ffffff;
+}
+#result.star3 { color: #00ffea; }
+#result.star4 { color: #ff69b4; }
+#result.legend { color: gold; font-size: 32px; }
+
+#history {
+    margin-top: 20px;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    font-size: 14px;
+}
+#historyList li {
+    color: #ffffff;
+}
+
+#minigame {
+    display: none;
+    border: 2px solid #555;
+    padding: 15px;
+    margin-top: 20px;
+    background: rgba(0,0,0,0.6);
+}
+
+#container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+</style>
+</head>
+<body>
+
+<h1>🎰 ガチャ</h1>
+<p>
+💰 コイン：<span id="stone">100</span>　
+⭐ ポイント：<span id="point">0</span>p
+</p>
+
+<div id="container">
+    <div id="minigame">
+        <h3>🎮 コインチャンス（コイン0で解放）</h3>
+        <p>1〜3の数字を当てろ！（成功でコイン+50）</p>
+        <input type="number" id="guess" min="1" max="3">
+        <button id="miniBtn" onclick="playMiniGame()">挑戦</button>
+        <p id="miniResult"></p>
+    </div>
+
+    <button id="gachaBtn" onclick="gacha()">ガチャを回す（10コイン）</button>
+    <button id="restartBtn" style="display:none;" onclick="restartGame()">もう一度遊ぶ</button>
+
+    <p id="result"></p>
+
+    <div id="history">
+        <h3>📦 手持ち</h3>
+        <ul id="historyList"></ul>
+    </div>
+</div>
+
+<script>
+let stone = 100;
+let point = 0;
+const goalPoint = 100;
+
+function checkStone() {
+    const minigame = document.getElementById("minigame");
+    const gachaBtn = document.getElementById("gachaBtn");
+
+    if (stone === 0) {
+        minigame.style.display = "block";
+        gachaBtn.disabled = true;
+    } else {
+        minigame.style.display = "none";
+        gachaBtn.disabled = stone < 10;
+    }
+}
+
+function gacha() {
+    const resultElem = document.getElementById("result");
+    resultElem.textContent = "";
+    resultElem.className = "";
+
+    if (stone < 10) {
+        resultElem.textContent = "コインが足りない！";
+        return;
+    }
+
+    stone -= 10;
+    document.getElementById("stone").textContent = stone;
+
+    const gachaList = [
+        { name: "💎 クリスタルオーブ", rate: 5, star: 5 },
+        { name: "🪄 魔導書", rate: 8, star: 4 },
+        { name: "🏹 弓矢", rate: 10, star: 3 },
+        { name: "🗡️ 鉄の剣", rate: 10, star: 3 },
+        { name: "🥩 ステーキ", rate: 30, star: 2 },
+        { name: "🪶 羽", rate: 37, star: 1 }
+    ];
+
+    let pool = [];
+    gachaList.forEach(item => {
+        for (let i = 0; i < item.rate; i++) pool.push(item);
+    });
+
+    const result = pool[Math.floor(Math.random() * pool.length)];
+
+    let starPoint = 0;
+    if (result.star === 3) starPoint = 5;
+    if (result.star === 4) starPoint = 10;
+    if (result.star === 5) starPoint = 30;
+
+    point += starPoint;
+    document.getElementById("point").textContent = point;
+
+    if (result.star === 3) resultElem.classList.add("star3");
+    if (result.star === 4) resultElem.classList.add("star4");
+    if (result.star === 5) resultElem.classList.add("legend");
+
+    resultElem.textContent = "結果：" + result.name;
+    if (starPoint > 0) resultElem.textContent += `（+${starPoint}p）`;
+
+    const historyList = document.getElementById("historyList");
+    const li = document.createElement("li");
+    li.textContent = `${result.name} (+${starPoint}p, ⭐${result.star})`;
+    historyList.prepend(li);
+    if (historyList.children.length > 10) {
+        historyList.removeChild(historyList.lastChild);
+    }
+
+    if (point >= goalPoint) {
+        alert("🎉 ゲームクリア！");
+        document.getElementById("gachaBtn").style.display = "none";
+        document.getElementById("restartBtn").style.display = "inline-block";
+    }
+
+    checkStone();
+}
+
+function playMiniGame() {
+    const guessInput = document.getElementById("guess");
+    const miniBtn = document.getElementById("miniBtn");
+    const miniResult = document.getElementById("miniResult");
+
+    const guess = Number(guessInput.value);
+    if (guess < 1 || guess > 3) {
+        miniResult.textContent = "⚠️ 1〜3を入力してね";
+        return;
+    }
+
+    const answer = Math.floor(Math.random() * 3) + 1;
+
+    if (guess === answer) {
+        stone += 50;
+        document.getElementById("stone").textContent = stone;
+        miniResult.textContent = "🎉 大当たり！コイン+50！";
+        guessInput.value = "";
+        checkStone();
+    } else {
+        miniResult.textContent = "😭 ハズレ！ 正解は " + answer;
+        guessInput.disabled = true;
+        miniBtn.disabled = true;
+
+        setTimeout(() => {
+            guessInput.disabled = false;
+            miniBtn.disabled = false;
+            guessInput.value = "";
+            miniResult.textContent = "";
+        }, 3000);
+    }
+}
+
+function restartGame() {
+    stone = 100;
+    point = 0;
+
+    document.getElementById("stone").textContent = stone;
+    document.getElementById("point").textContent = point;
+
+    document.getElementById("historyList").innerHTML = "";
+
+    const resultElem = document.getElementById("result");
+    resultElem.textContent = "";
+    resultElem.className = "";
+
+    document.getElementById("gachaBtn").style.display = "inline-block";
+    document.getElementById("restartBtn").style.display = "none";
+
+    checkStone();
+}
+
+checkStone();
+</script>
+
+</body>
+</html>
